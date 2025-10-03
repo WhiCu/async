@@ -22,9 +22,7 @@ type Trier[T any] struct {
 
 // storePanic stores the panic value atomically with a stable heap-allocated address.
 func (t *Trier[T]) storePanic(r any) {
-	// copy value to a new variable so the address is stable/heap-allocated
-	v := r
-	t.value.Store(&v)
+	t.value.Store(&r)
 }
 
 // recover captures any panic that occurs and stores it atomically.
@@ -65,7 +63,7 @@ func (t *Trier[T]) TryErr(f func() error) (err error) {
 		defer t.recover()
 		err = f()
 	}()
-	return t.сhangeErrorIfPanic(err)
+	return t.changeErrorIfPanic(err)
 }
 
 // TryValueErr executes function f and returns its value, error, and any panic as an error.
@@ -76,7 +74,7 @@ func (t *Trier[T]) TryValueErr(f func() (T, error)) (v T, err error) {
 		defer t.recover()
 		v, err = f()
 	}()
-	return v, t.сhangeErrorIfPanic(err)
+	return v, t.changeErrorIfPanic(err)
 }
 
 // Repanic re-throws the stored panic value, if any.
@@ -95,15 +93,18 @@ func (t *Trier[T]) Value() any {
 
 // PanicAsError returns the stored panic value as an error, or nil if no panic occurred.
 func (t *Trier[T]) PanicAsError() error {
-	return AsPanicError(t.Value())
+	if t.Value() == nil {
+		return nil
+	}
+	return NewPanicError(t.Value())
 }
 
 // сhangeErrorIfPanic returns the original error if no panic occurred, or converts the panic to an error.
-func (t *Trier[T]) сhangeErrorIfPanic(err error) error {
+func (t *Trier[T]) changeErrorIfPanic(err error) error {
 	if t.Value() == nil {
 		return err
 	}
-	return AsPanicError(t.Value())
+	return NewPanicError(t.Value())
 }
 
 // Clean resets the Trier state, clearing any stored panic information.
