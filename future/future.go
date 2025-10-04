@@ -2,14 +2,14 @@
 // It allows running functions in goroutines and converts any panics to errors for easier handling.
 package future
 
-import "github.com/WhiCu/async/panics"
+import "github.com/WhiCu/async/try"
 
 // future represents an asynchronous computation that converts panics to errors.
 // It wraps a channel for receiving results and uses Trier for panic handling.
 type future[T any] struct {
 	value <-chan valueError[T]
 
-	t panics.Trier[T]
+	t try.Trier[T]
 }
 
 // valueError wraps a value and error result from a future computation.

@@ -1,4 +1,4 @@
-package panics
+package try
 
 import (
 	"errors"

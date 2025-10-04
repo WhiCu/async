@@ -1,7 +1,7 @@
 // Package panics provides utilities for safely handling panics in Go programs.
 // It offers a Trier type that can execute functions and capture any panics that occur,
 // converting them to errors for easier handling in Go's error-based control flow.
-package panics
+package try
 
 import (
 	"sync/atomic"

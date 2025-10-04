@@ -1,14 +1,14 @@
-package panics_test
+package try_test
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/WhiCu/async/panics"
+	"github.com/WhiCu/async/try"
 )
 
 func BenchmarkTrier_Try_NoPanic(b *testing.B) {
-	t := &panics.Trier[int]{}
+	t := &try.Trier[int]{}
 	f := func() {}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -17,7 +17,7 @@ func BenchmarkTrier_Try_NoPanic(b *testing.B) {
 }
 
 func BenchmarkTrier_Try_Panic(b *testing.B) {
-	t := &panics.Trier[int]{}
+	t := &try.Trier[int]{}
 	f := func() { panic("boom") }
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -26,7 +26,7 @@ func BenchmarkTrier_Try_Panic(b *testing.B) {
 }
 
 func BenchmarkTrier_TryValue_NoPanic(b *testing.B) {
-	t := &panics.Trier[int]{}
+	t := &try.Trier[int]{}
 	f := func() int { return 42 }
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -35,7 +35,7 @@ func BenchmarkTrier_TryValue_NoPanic(b *testing.B) {
 }
 
 func BenchmarkTrier_TryValue_Panic(b *testing.B) {
-	t := &panics.Trier[int]{}
+	t := &try.Trier[int]{}
 	f := func() int { panic("boom") }
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -44,7 +44,7 @@ func BenchmarkTrier_TryValue_Panic(b *testing.B) {
 }
 
 func BenchmarkTrier_TryErr_NoPanic(b *testing.B) {
-	t := &panics.Trier[int]{}
+	t := &try.Trier[int]{}
 	f := func() error { return errors.New("fail") }
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -53,7 +53,7 @@ func BenchmarkTrier_TryErr_NoPanic(b *testing.B) {
 }
 
 func BenchmarkTrier_TryErr_Panic(b *testing.B) {
-	t := &panics.Trier[int]{}
+	t := &try.Trier[int]{}
 	f := func() error { panic("boom") }
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -62,7 +62,7 @@ func BenchmarkTrier_TryErr_Panic(b *testing.B) {
 }
 
 func BenchmarkTrier_TryValueErr_NoPanic(b *testing.B) {
-	t := &panics.Trier[int]{}
+	t := &try.Trier[int]{}
 	f := func() (int, error) { return 42, errors.New("fail") }
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -71,7 +71,7 @@ func BenchmarkTrier_TryValueErr_NoPanic(b *testing.B) {
 }
 
 func BenchmarkTrier_TryValueErr_Panic(b *testing.B) {
-	t := &panics.Trier[int]{}
+	t := &try.Trier[int]{}
 	f := func() (int, error) { panic("boom") }
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
