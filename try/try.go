@@ -1,4 +1,4 @@
-package panics
+package try
 
 func Try(f func()) (err error) {
 	var t Trier[any]
