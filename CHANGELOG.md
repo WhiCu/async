@@ -1,3 +1,13 @@
+## Unreleased
+
+### Feat
+
+- **try**: remake try
+
+### Refactor
+
+- **pool**: move pool from async/workerpool/ to async/
+
 ## v0.1.1 (2025-10-05)
 
 ## v0.1.0 (2025-10-05)
