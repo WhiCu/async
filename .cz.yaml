@@ -9,10 +9,10 @@ commitizen:
   tag_format: "v$version"
 
   # === CHANGELOG ===
-  # update_changelog_on_bump: true
+  update_changelog_on_bump: true
   changelog_file: "CHANGELOG.md"
   changelog_format: "md"
-  changelog_incremental: true
+  # changelog_incremental: true
 
   # === СООБЩЕНИЕ ПРИ ОБНОВЛЕНИИ ВЕРСИИ ===
   bump_message: "chore(release): v$current_version -> v$new_version"
