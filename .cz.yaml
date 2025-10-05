@@ -9,7 +9,7 @@ commitizen:
   tag_format: "v$version"
 
   # === CHANGELOG ===
-  update_changelog_on_bump: true
+  # update_changelog_on_bump: true
   changelog_file: "CHANGELOG.md"
   changelog_format: "md"
   changelog_incremental: true

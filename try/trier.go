@@ -15,6 +15,8 @@ type (
 // Trier provides thread-safe panic handling for functions.
 // It can execute functions and capture any panics that occur,
 // converting them to errors
+// Don't use pointer as Trier is not thread-safe
+// Trier is not thread-safe
 type Trier[T any] struct {
 	value atomic.Pointer[any]
 	// worked atomic.Bool

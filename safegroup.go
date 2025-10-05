@@ -7,12 +7,11 @@ import (
 
 type SafeGroup struct {
 	errgroup errgroup.Group
-	trier    try.TrierAny
 }
 
 func (wg *SafeGroup) Go(f func()) {
 	wg.errgroup.Go(func() error {
-		return wg.trier.Try(f)
+		return try.Try(f)
 	})
 }
 
