@@ -1,0 +1,37 @@
+commitizen:
+  # === ФОРМАТ КОММИТОВ ===
+  name: cz_conventional_commits
+  version_provider: scm
+  version_scheme: semver
+
+  # === ВЕРСИОНИРОВАНИЕ ===
+  major_version_zero: true
+  tag_format: "v$version"
+
+  # === CHANGELOG ===
+  update_changelog_on_bump: true
+  changelog_file: "CHANGELOG.md"
+  changelog_format: "md"
+  changelog_incremental: true
+
+  # === СООБЩЕНИЕ ПРИ ОБНОВЛЕНИИ ВЕРСИИ ===
+  bump_message: "chore(release): v$current_version -> v$new_version"
+
+  # === КАСТОМИЗАЦИЯ ДЛЯ GO-ПРОЕКТОВ ===
+  customize:
+    extra_scopes:
+      - "async"
+      - "future"
+      - "try" 
+      - "workerpool"
+      - "stream"
+      - "examples"
+      - "docs"
+      - "ci"
+      - "bench"
+      - "test"
+
+  # === ПРОВЕРКА КОММИТОВ ===
+  check_commit_message: true    # Включить проверку формата
+  min_message_length: 10        # Минимальная длина описания
+  max_message_length: 72        # Максимальная длина первой строки
