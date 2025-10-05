@@ -17,21 +17,7 @@ commitizen:
   # === СООБЩЕНИЕ ПРИ ОБНОВЛЕНИИ ВЕРСИИ ===
   bump_message: "chore(release): v$current_version -> v$new_version"
 
-  # === КАСТОМИЗАЦИЯ ДЛЯ GO-ПРОЕКТОВ ===
-  customize:
-    extra_scopes:
-      - "async"
-      - "future"
-      - "try" 
-      - "workerpool"
-      - "stream"
-      - "examples"
-      - "docs"
-      - "ci"
-      - "bench"
-      - "test"
-
   # === ПРОВЕРКА КОММИТОВ ===
-  check_commit_message: true    # Включить проверку формата
-  min_message_length: 10        # Минимальная длина описания
-  max_message_length: 72        # Максимальная длина первой строки
+  check_commit_message: true
+  min_message_length: 10
+  max_message_length: 72
