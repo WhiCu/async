@@ -1,4 +1,17 @@
-## Unreleased
+## v0.3.0 (2025-10-06)
+
+### Feat
+
+- **ctxgroup**: changed name of methods to match interface
+- **ctxgroup**: init
+- **safegroup**: add new methods
+- **safegroup**: change struct
+
+### Refactor
+
+- **safegroup**: move safegroup from async/ to async/group/safegroup/
+
+## v0.2.0 (2025-10-05)
 
 ### Feat
 
