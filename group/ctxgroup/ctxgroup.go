@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/WhiCu/async/group"
 	"github.com/WhiCu/async/try"
 )
 
@@ -36,9 +37,7 @@ func (g *Group) decrement() {
 	}
 }
 
-func (g *Group) Go(f func(context.Context)) {
-	g.increment()
-
+func (g *Group) rawGo(f func(context.Context)) {
 	g.wg.Go(
 		func() {
 			if err := try.Try(func() { f(g.Ctx) }); err != nil {
@@ -52,9 +51,7 @@ func (g *Group) Go(f func(context.Context)) {
 	)
 }
 
-func (g *Group) GoErr(f func(context.Context) error) {
-	g.increment()
-
+func (g *Group) rawGoErr(f func(context.Context) error) {
 	g.wg.Go(
 		func() {
 			if err := try.TryErr(func() error { return f(g.Ctx) }); err != nil {
@@ -68,49 +65,41 @@ func (g *Group) GoErr(f func(context.Context) error) {
 	)
 }
 
-func (g *Group) TryGo(f func(context.Context)) error {
+func (g *Group) CtxGo(f func(context.Context)) {
+	g.increment()
+
+	g.rawGo(f)
+}
+
+func (g *Group) CtxGoErr(f func(context.Context) error) {
+	g.increment()
+
+	g.rawGoErr(f)
+}
+
+func (g *Group) CtxTryGo(f func(context.Context)) error {
 	if g.sem != nil {
 		select {
 		case g.sem <- struct{}{}:
 		default:
-			return ErrLimitExceeded
+			return group.ErrLimitExceeded
 		}
 	}
 
-	g.wg.Go(
-		func() {
-			if err := try.Try(func() { f(g.Ctx) }); err != nil {
-				g.errOnce.Do(func() {
-					g.err = err
-					g.Cancel()
-				})
-			}
-			g.decrement()
-		},
-	)
+	g.rawGo(f)
 	return nil
 }
 
-func (g *Group) TryGoErr(f func(context.Context) error) error {
+func (g *Group) CtxTryGoErr(f func(context.Context) error) error {
 	if g.sem != nil {
 		select {
 		case g.sem <- struct{}{}:
 		default:
-			return ErrLimitExceeded
+			return group.ErrLimitExceeded
 		}
 	}
 
-	g.wg.Go(
-		func() {
-			if err := try.TryErr(func() error { return f(g.Ctx) }); err != nil {
-				g.errOnce.Do(func() {
-					g.err = err
-					g.Cancel()
-				})
-			}
-			g.decrement()
-		},
-	)
+	g.rawGoErr(f)
 	return nil
 }
 
@@ -133,13 +122,14 @@ func (g *Group) Wait() error {
 
 func (g *Group) SetLimit(n int) error {
 	if len(g.sem) != 0 {
-		return ErrModifyLimit
+		return group.ErrModifyLimit
 	}
 
 	if n < 0 {
 		g.sem = nil
-		return ErrNegativeLimit
+		return group.ErrNegativeLimit
 	}
+
 	g.sem = make(chan struct{}, n)
 	return nil
 }

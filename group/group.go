@@ -2,20 +2,49 @@ package group
 
 import "context"
 
-type Group interface {
+type Runner interface {
 	Go(f func())
+	TryGo(f func()) error
+}
+
+type ErrRunner interface {
 	GoErr(f func() error)
-	TryGo(f func()) bool
-	TryGoErr(f func() error) bool
+	TryGoErr(f func() error) error
+}
+
+type Limiter interface {
 	SetLimit(limit int) error
+}
+
+type Waiter interface {
 	Wait() error
 }
 
-type CtxGroup interface {
-	Group
+type Group interface {
+	Runner
+	ErrRunner
+	Limiter
+	Waiter
+}
+
+type CtxRunner interface {
 	CtxGo(f func(context.Context))
+	CtxTryGo(f func(context.Context)) error
+}
+
+type CtxErrRunner interface {
 	CtxGoErr(f func(context.Context) error)
-	CtxTryGo(f func(context.Context)) bool
-	CtxTryGoErr(f func(context.Context) error) bool
+	CtxTryGoErr(f func(context.Context) error) error
+}
+
+type Canceler interface {
 	Cancel()
+}
+
+type CtxGroup interface {
+	CtxRunner
+	CtxErrRunner
+	Limiter
+	Waiter
+	Canceler
 }
