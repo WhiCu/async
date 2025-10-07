@@ -1,3 +1,9 @@
+## v0.4.0 (2025-10-07)
+
+### Feat
+
+- **ctxgroup**: add context to methods
+
 ## v0.3.0 (2025-10-06)
 
 ### Feat
