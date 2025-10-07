@@ -25,7 +25,6 @@ func TestGroup_Behavior(t *testing.T) {
 
 			So(err, ShouldBeNil)
 			So(counter.Load(), ShouldEqual, 2)
-			// Wait() вызывает Cancel() => контекст должен быть отменён с cause context.Canceled
 			So(context.Cause(groupCtx), ShouldEqual, context.Canceled)
 		})
 

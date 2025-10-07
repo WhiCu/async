@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/WhiCu/async/group"
 	"github.com/WhiCu/async/group/safegroup"
 	"github.com/WhiCu/async/try"
 	. "github.com/smartystreets/goconvey/convey"
@@ -15,67 +16,87 @@ func TestSafeGroup(t *testing.T) {
 	Convey("Given a SafeGroup instance", t, func() {
 		var sg safegroup.Group
 
-		Convey("When running multiple successful goroutines", func() {
+		Convey("It should run multiple successful goroutines", func() {
 			var count atomic.Int32
 			for i := 0; i < 5; i++ {
 				sg.Go(func() { count.Add(1) })
 			}
 
 			err := sg.Wait()
-
-			Convey("Then no error should occur", func() {
-				So(err, ShouldBeNil)
-			})
-
-			Convey("And all goroutines should have completed", func() {
-				So(count.Load(), ShouldEqual, 5)
-			})
+			So(err, ShouldBeNil)
+			So(count.Load(), ShouldEqual, 5)
 		})
 
-		Convey("When one of the goroutines panics", func() {
+		Convey("It should capture panic from a goroutine", func() {
 			sg.Go(func() { panic("boom") })
-			sg.Go(func() {}) // нормальная горутина
+			sg.Go(func() {})
 
 			err := sg.Wait()
-
-			Convey("Then an error should be returned", func() {
-				So(err, ShouldNotBeNil)
-			})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "boom")
+			So(try.AsPanicError(err), ShouldBeTrue)
 		})
 
-		Convey("When SetLimit is applied", func() {
-			sg.SetLimit(1)
+		Convey("It should respect SetLimit()", func() {
+			So(sg.SetLimit(1), ShouldBeNil)
 
+			var counter atomic.Int32
 			start := time.Now()
 
 			for i := 0; i < 3; i++ {
 				sg.Go(func() {
-					time.Sleep(100 * time.Millisecond)
+					time.Sleep(50 * time.Millisecond)
+					counter.Add(1)
 				})
 			}
 
-			sg.Wait()
-			elapsed := time.Since(start)
+			err := sg.Wait()
+			So(err, ShouldBeNil)
+			So(counter.Load(), ShouldEqual, 3)
 
-			Convey("Then execution time should reflect the concurrency limit", func() {
-				So(elapsed, ShouldBeGreaterThanOrEqualTo, 300*time.Millisecond)
-			})
+			elapsed := time.Since(start)
+			So(elapsed, ShouldBeGreaterThanOrEqualTo, 150*time.Millisecond)
 		})
 
-		Convey("When a goroutine returns an explicit error", func() {
-			expected := errors.New("custom error")
-			sg.Go(func() {
-				panic(expected)
-			})
+		Convey("It should return ErrLimitExceeded from TryGo()", func() {
+			So(sg.SetLimit(1), ShouldBeNil)
 
-			err := sg.Wait()
+			done := make(chan struct{})
+			err := sg.TryGo(func() {
+				time.Sleep(100 * time.Millisecond)
+				close(done)
+			})
+			So(err, ShouldBeNil)
 
-			Convey("Then the returned error should match the panic value", func() {
-				So(err.Error(), ShouldContainSubstring, "custom error")
-			})
-			Convey("And the error should be a PanicError", func() {
-				So(try.AsPanicError(err), ShouldBeTrue)
-			})
+			err = sg.TryGo(func() {})
+			So(err, ShouldEqual, group.ErrLimitExceeded)
+
+			<-done
+			So(sg.Wait(), ShouldBeNil)
+		})
+
+		Convey("It should propagate explicit errors from TryGoErr()", func() {
+			testErr := errors.New("custom error")
+			err := sg.TryGoErr(func() error { return testErr })
+			So(err, ShouldBeNil)
+
+			waitErr := sg.Wait()
+			So(waitErr, ShouldEqual, testErr)
+		})
+
+		Convey("It should return ErrModifyLimit if SetLimit is called after work started", func() {
+			So(sg.SetLimit(1), ShouldBeNil)
+			sg.Go(func() { time.Sleep(50 * time.Millisecond) })
+
+			err := sg.SetLimit(2)
+			So(err, ShouldEqual, group.ErrModifyLimit)
+
+			So(sg.Wait(), ShouldBeNil)
+		})
+
+		Convey("It should return ErrNegativeLimit for negative limit", func() {
+			err := sg.SetLimit(-1)
+			So(err, ShouldEqual, group.ErrNegativeLimit)
 		})
 	})
 }
