@@ -14,138 +14,136 @@ import (
 
 func TestGroup_Behavior(t *testing.T) {
 	Convey("Given a new ctxgroup.Group with context", t, func() {
-		g, ctx := ctxgroup.WithContext(context.Background())
+		g, groupCtx := ctxgroup.WithContext(context.Background())
 
-		Convey("When running multiple goroutines with Go()", func() {
+		Convey("It should run multiple goroutines with CtxGo()", func() {
 			var counter atomic.Int32
-			g.CtxGo(func(ctx context.Context) {
-				counter.Add(1)
-			})
-			g.CtxGo(func(ctx context.Context) {
-				counter.Add(1)
-			})
+			g.CtxGo(context.Background(), func(ctx context.Context) { counter.Add(1) })
+			g.CtxGo(context.Background(), func(ctx context.Context) { counter.Add(1) })
 
 			err := g.Wait()
 
-			Convey("Then all goroutines should finish successfully", func() {
-				So(err, ShouldBeNil)
-				So(counter.Load(), ShouldEqual, 2)
-				So(context.Cause(ctx), ShouldEqual, context.Canceled)
-			})
+			So(err, ShouldBeNil)
+			So(counter.Load(), ShouldEqual, 2)
+			// Wait() вызывает Cancel() => контекст должен быть отменён с cause context.Canceled
+			So(context.Cause(groupCtx), ShouldEqual, context.Canceled)
 		})
 
-		Convey("When a goroutine panics", func() {
-			g.CtxGo(func(ctx context.Context) {
-				panic("boom")
-			})
+		Convey("It should handle panic correctly", func() {
+			g.CtxGo(context.Background(), func(ctx context.Context) { panic("boom") })
 
 			err := g.Wait()
 
-			Convey("Then Wait should return a panic error", func() {
-				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldContainSubstring, "boom")
-				So(context.Cause(ctx).Error(), ShouldContainSubstring, "boom")
-			})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "boom")
+			So(context.Cause(groupCtx).Error(), ShouldContainSubstring, "boom")
 		})
 
-		Convey("When a goroutine returns an error using GoErr()", func() {
+		Convey("It should propagate error from CtxGoErr()", func() {
 			testErr := errors.New("something went wrong")
 
-			g.CtxGoErr(func(ctx context.Context) error {
+			g.CtxGoErr(context.Background(), func(ctx context.Context) error {
 				return testErr
 			})
 
 			err := g.Wait()
 
-			Convey("Then the error should propagate", func() {
-				So(err, ShouldEqual, testErr)
-				So(context.Cause(ctx), ShouldEqual, testErr)
-			})
+			So(err, ShouldEqual, testErr)
+			So(context.Cause(groupCtx), ShouldEqual, testErr)
 		})
 
-		Convey("When SetLimit is used", func() {
-			err := g.SetLimit(2)
+		Convey("It should respect SetLimit()", func() {
+			So(g.SetLimit(2), ShouldBeNil)
 
-			Convey("Then limit should be applied without error", func() {
-				So(err, ShouldBeNil)
-			})
-
-			Convey("When running more goroutines than the limit with TryGo()", func() {
-				called := atomic.Int32{}
-				for i := 0; i < 2; i++ {
-					So(g.CtxTryGo(func(ctx context.Context) {
-						time.Sleep(10 * time.Millisecond)
-						called.Add(1)
-					}), ShouldBeNil)
-				}
-
-				err := g.CtxTryGo(func(ctx context.Context) {
+			called := atomic.Int32{}
+			for i := 0; i < 2; i++ {
+				err := g.CtxTryGo(context.Background(), func(ctx context.Context) {
 					time.Sleep(10 * time.Millisecond)
+					called.Add(1)
 				})
+				So(err, ShouldBeNil)
+			}
 
-				Convey("Then the third call should fail with ErrLimitExceeded", func() {
-					So(err, ShouldEqual, group.ErrLimitExceeded)
-				})
+			err := g.CtxTryGo(context.Background(), func(ctx context.Context) {})
+			So(err, ShouldEqual, group.ErrLimitExceeded)
 
-				Convey("And the others should execute", func() {
-					So(g.Wait(), ShouldBeNil)
-					So(called.Load(), ShouldEqual, 2)
-				})
-			})
+			So(g.Wait(), ShouldBeNil)
+			So(called.Load(), ShouldEqual, 2)
 		})
 
-		Convey("When SetLimit called", func() {
+		Convey("It should return ErrModifyLimit if SetLimit called again after work started", func() {
 			So(g.SetLimit(1), ShouldBeNil)
-			g.CtxGo(func(ctx context.Context) { <-ctx.Done() })
-			Convey("Then ErrModifyLimit should be returned for the second call", func() {
-				So(g.SetLimit(2), ShouldEqual, group.ErrModifyLimit)
-				Convey("But Wait should still work", func() {
-					g.Cancel()
-					So(g.Wait(), ShouldBeNil)
-				})
+			g.CtxGo(context.Background(), func(ctx context.Context) { <-ctx.Done() })
+			So(g.SetLimit(2), ShouldEqual, group.ErrModifyLimit)
 
-			})
-
+			g.Cancel()
+			So(g.Wait(), ShouldBeNil)
 		})
 
-		Convey("When SetLimit called with negative value", func() {
+		Convey("It should return ErrNegativeLimit for negative limit", func() {
 			err := g.SetLimit(-1)
-			Convey("Then ErrNegativeLimit should be returned", func() {
-				So(err, ShouldEqual, group.ErrNegativeLimit)
-			})
+			So(err, ShouldEqual, group.ErrNegativeLimit)
 		})
 	})
 }
 
 func TestGroup_CancelPropagation(t *testing.T) {
 	Convey("Given a group with context cancellation", t, func() {
-		g, ctx := ctxgroup.WithContext(context.Background())
+		g, groupCtx := ctxgroup.WithContext(context.Background())
 
-		Convey("When one goroutine cancels the context", func() {
-			var i atomic.Int32
+		var i atomic.Int32
 
-			g.CtxGo(func(ctx context.Context) {
-				select {
-				case <-time.After(5 * time.Second):
-					i.Store(1)
-				case <-ctx.Done():
-					i.Store(2)
-				}
-			})
-
-			g.CtxGoErr(func(ctx context.Context) error {
-				return errors.New("fatal")
-			})
-
-			err := g.Wait()
-
-			Convey("Then the Wait should return the first error and cancel the context", func() {
-				So(err.Error(), ShouldEqual, "fatal")
-
-				So(context.Cause(ctx).Error(), ShouldEqual, "fatal")
-
-				So(i.Load(), ShouldEqual, int32(2))
-			})
+		g.CtxGo(context.Background(), func(ctx context.Context) {
+			select {
+			case <-time.After(5 * time.Second):
+				i.Store(1)
+			case <-ctx.Done():
+				i.Store(2)
+			}
 		})
+
+		g.CtxGoErr(context.Background(), func(ctx context.Context) error {
+			return errors.New("fatal")
+		})
+
+		err := g.Wait()
+
+		So(err.Error(), ShouldEqual, "fatal")
+		So(context.Cause(groupCtx).Error(), ShouldEqual, "fatal")
+		So(i.Load(), ShouldEqual, int32(2))
+	})
+}
+
+func TestGroup_IsolatedCancellation(t *testing.T) {
+	Convey("Given two independent groups sharing the same parent context", t, func() {
+		parent := context.Background()
+
+		group1, ctx1 := ctxgroup.WithContext(parent)
+		group2, ctx2 := ctxgroup.WithContext(parent)
+
+		var g1Cancelled, g2Cancelled atomic.Bool
+
+		group1.CtxGo(context.Background(), func(ctx context.Context) {
+			<-ctx.Done()
+			g1Cancelled.Store(true)
+		})
+
+		group2.CtxGo(context.Background(), func(ctx context.Context) {
+			select {
+			case <-ctx.Done():
+				g2Cancelled.Store(true)
+			case <-time.After(50 * time.Millisecond):
+			}
+		})
+
+		group1.Cancel()
+		So(group1.Wait(), ShouldBeNil)
+
+		So(g1Cancelled.Load(), ShouldBeTrue)
+		So(context.Cause(ctx1), ShouldEqual, context.Canceled)
+
+		So(context.Cause(ctx2), ShouldBeNil)
+
+		So(group2.Wait(), ShouldBeNil)
 	})
 }

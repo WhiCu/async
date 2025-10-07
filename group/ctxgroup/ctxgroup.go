@@ -6,6 +6,7 @@ import (
 
 	"github.com/WhiCu/async/group"
 	"github.com/WhiCu/async/try"
+	"github.com/WhiCu/async/utils/mergectx"
 )
 
 type Group struct {
@@ -37,10 +38,14 @@ func (g *Group) decrement() {
 	}
 }
 
-func (g *Group) rawGo(f func(context.Context)) {
+func mergeCtx(primary, secondary context.Context) context.Context {
+	return mergectx.MergeContext(primary, secondary)
+}
+
+func (g *Group) rawGo(f func(context.Context), ctx context.Context) {
 	g.wg.Go(
 		func() {
-			if err := try.Try(func() { f(g.Ctx) }); err != nil {
+			if err := try.Try(func() { f(ctx) }); err != nil {
 				g.errOnce.Do(func() {
 					g.err = err
 					g.Cancel()
@@ -51,10 +56,10 @@ func (g *Group) rawGo(f func(context.Context)) {
 	)
 }
 
-func (g *Group) rawGoErr(f func(context.Context) error) {
+func (g *Group) rawGoErr(f func(context.Context) error, ctx context.Context) {
 	g.wg.Go(
 		func() {
-			if err := try.TryErr(func() error { return f(g.Ctx) }); err != nil {
+			if err := try.TryErr(func() error { return f(ctx) }); err != nil {
 				g.errOnce.Do(func() {
 					g.err = err
 					g.Cancel()
@@ -65,19 +70,23 @@ func (g *Group) rawGoErr(f func(context.Context) error) {
 	)
 }
 
-func (g *Group) CtxGo(f func(context.Context)) {
+func (g *Group) CtxGo(ctx context.Context, f func(context.Context)) {
 	g.increment()
 
-	g.rawGo(f)
+	ctx = mergeCtx(g.Ctx, ctx)
+	g.rawGo(f, ctx)
+
 }
 
-func (g *Group) CtxGoErr(f func(context.Context) error) {
+func (g *Group) CtxGoErr(ctx context.Context, f func(context.Context) error) {
 	g.increment()
 
-	g.rawGoErr(f)
+	ctx = mergeCtx(g.Ctx, ctx)
+	g.rawGoErr(f, ctx)
+
 }
 
-func (g *Group) CtxTryGo(f func(context.Context)) error {
+func (g *Group) CtxTryGo(ctx context.Context, f func(context.Context)) error {
 	if g.sem != nil {
 		select {
 		case g.sem <- struct{}{}:
@@ -86,11 +95,13 @@ func (g *Group) CtxTryGo(f func(context.Context)) error {
 		}
 	}
 
-	g.rawGo(f)
+	ctx = mergeCtx(g.Ctx, ctx)
+	g.rawGo(f, ctx)
+
 	return nil
 }
 
-func (g *Group) CtxTryGoErr(f func(context.Context) error) error {
+func (g *Group) CtxTryGoErr(ctx context.Context, f func(context.Context) error) error {
 	if g.sem != nil {
 		select {
 		case g.sem <- struct{}{}:
@@ -99,7 +110,9 @@ func (g *Group) CtxTryGoErr(f func(context.Context) error) error {
 		}
 	}
 
-	g.rawGoErr(f)
+	ctx = mergeCtx(g.Ctx, ctx)
+	g.rawGoErr(f, ctx)
+
 	return nil
 }
 

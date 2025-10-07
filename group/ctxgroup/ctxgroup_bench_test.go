@@ -17,7 +17,7 @@ func BenchmarkCtxGroup_NoPanic(b *testing.B) {
 			var number atomic.Int64
 			for i := 0; i < b.N; i++ {
 				for j := 0; j < workers; j++ {
-					wg.CtxGo(func(ctx context.Context) {
+					wg.CtxGo(context.Background(), func(ctx context.Context) {
 						number.Add(1)
 					})
 				}
@@ -34,7 +34,7 @@ func BenchmarkCtxGroup_Panic(b *testing.B) {
 		b.Run(fmt.Sprintf("Workers_%d", workers), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				for j := 0; j < workers; j++ {
-					wg.CtxGo(func(ctx context.Context) {
+					wg.CtxGo(context.Background(), func(ctx context.Context) {
 						panic("boom")
 					})
 				}
@@ -54,7 +54,7 @@ func BenchmarkCtxGroup_ContextCancel(b *testing.B) {
 
 				var cancelled atomic.Int64
 				for j := 0; j < workers; j++ {
-					wg.CtxGo(func(ctx context.Context) {
+					wg.CtxGo(context.Background(), func(ctx context.Context) {
 						<-ctx.Done()
 						cancelled.Add(1)
 					})

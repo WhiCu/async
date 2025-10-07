@@ -3,13 +3,13 @@ package group
 import "context"
 
 type Runner interface {
-	Go(f func())
-	TryGo(f func()) error
+	Go(func())
+	TryGo(func()) error
 }
 
 type ErrRunner interface {
-	GoErr(f func() error)
-	TryGoErr(f func() error) error
+	GoErr(func() error)
+	TryGoErr(func() error) error
 }
 
 type Limiter interface {
@@ -28,13 +28,13 @@ type Group interface {
 }
 
 type CtxRunner interface {
-	CtxGo(f func(context.Context))
-	CtxTryGo(f func(context.Context)) error
+	CtxGo(context.Context, func(context.Context))
+	CtxTryGo(context.Context, func(context.Context)) error
 }
 
 type CtxErrRunner interface {
-	CtxGoErr(f func(context.Context) error)
-	CtxTryGoErr(f func(context.Context) error) error
+	CtxGoErr(context.Context, func(context.Context) error)
+	CtxTryGoErr(context.Context, func(context.Context) error) error
 }
 
 type Canceler interface {
