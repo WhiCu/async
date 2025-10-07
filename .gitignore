@@ -1,3 +1,3 @@
 cmd/
-
+*.exe
 *_ai.go

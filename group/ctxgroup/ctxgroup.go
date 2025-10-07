@@ -73,7 +73,12 @@ func (g *Group) rawGoErr(f func(context.Context) error, ctx context.Context) {
 func (g *Group) CtxGo(ctx context.Context, f func(context.Context)) {
 	g.increment()
 
-	ctx = mergeCtx(g.Ctx, ctx)
+	switch {
+	case ctx == nil || ctx.Done() == nil:
+		ctx = g.Ctx
+	default:
+		ctx = mergeCtx(g.Ctx, ctx)
+	}
 	g.rawGo(f, ctx)
 
 }
@@ -81,7 +86,12 @@ func (g *Group) CtxGo(ctx context.Context, f func(context.Context)) {
 func (g *Group) CtxGoErr(ctx context.Context, f func(context.Context) error) {
 	g.increment()
 
-	ctx = mergeCtx(g.Ctx, ctx)
+	switch {
+	case ctx == nil || ctx.Done() == nil:
+		ctx = g.Ctx
+	default:
+		ctx = mergeCtx(g.Ctx, ctx)
+	}
 	g.rawGoErr(f, ctx)
 
 }
@@ -95,7 +105,12 @@ func (g *Group) CtxTryGo(ctx context.Context, f func(context.Context)) error {
 		}
 	}
 
-	ctx = mergeCtx(g.Ctx, ctx)
+	switch {
+	case ctx == nil || ctx.Done() == nil:
+		ctx = g.Ctx
+	default:
+		ctx = mergeCtx(g.Ctx, ctx)
+	}
 	g.rawGo(f, ctx)
 
 	return nil
@@ -110,7 +125,12 @@ func (g *Group) CtxTryGoErr(ctx context.Context, f func(context.Context) error) 
 		}
 	}
 
-	ctx = mergeCtx(g.Ctx, ctx)
+	switch {
+	case ctx == nil || ctx.Done() == nil:
+		ctx = g.Ctx
+	default:
+		ctx = mergeCtx(g.Ctx, ctx)
+	}
 	g.rawGoErr(f, ctx)
 
 	return nil

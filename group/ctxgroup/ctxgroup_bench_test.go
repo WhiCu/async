@@ -9,10 +9,12 @@ import (
 	"github.com/WhiCu/async/group/ctxgroup"
 )
 
-func BenchmarkCtxGroup_NoPanic(b *testing.B) {
-	var wg ctxgroup.Group
+func BenchmarkCtxGroup_NoPanic_NoCtx(b *testing.B) {
+
 	for _, workers := range []int{1, 4, 16} {
+		wg, _ := ctxgroup.WithContext(context.Background())
 		_ = wg.SetLimit(workers)
+
 		b.Run(fmt.Sprintf("Workers_%d", workers), func(b *testing.B) {
 			var number atomic.Int64
 			for i := 0; i < b.N; i++ {
@@ -27,9 +29,29 @@ func BenchmarkCtxGroup_NoPanic(b *testing.B) {
 	}
 }
 
-func BenchmarkCtxGroup_Panic(b *testing.B) {
-	var wg ctxgroup.Group
+func BenchmarkCtxGroup_NoPanic(b *testing.B) {
+	ctx, _ := context.WithCancel(context.Background())
 	for _, workers := range []int{1, 4, 16} {
+		wg, _ := ctxgroup.WithContext(context.Background())
+		_ = wg.SetLimit(workers)
+
+		b.Run(fmt.Sprintf("Workers_%d", workers), func(b *testing.B) {
+			var number atomic.Int64
+			for i := 0; i < b.N; i++ {
+				for j := 0; j < workers; j++ {
+					wg.CtxGo(ctx, func(ctx context.Context) {
+						number.Add(1)
+					})
+				}
+				_ = wg.Wait()
+			}
+		})
+	}
+}
+
+func BenchmarkCtxGroup_Panic(b *testing.B) {
+	for _, workers := range []int{1, 4, 16} {
+		wg, _ := ctxgroup.WithContext(context.Background())
 		_ = wg.SetLimit(workers)
 		b.Run(fmt.Sprintf("Workers_%d", workers), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
