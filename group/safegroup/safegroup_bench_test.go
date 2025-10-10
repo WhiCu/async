@@ -1,12 +1,30 @@
 package safegroup_test
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"sync/atomic"
 	"testing"
 
 	safe "github.com/WhiCu/async/group/safegroup"
 )
+
+func BenchmarkSafeGroup(b *testing.B) {
+	data := []byte("The quick brown fox jumps over the lazy dog")
+	var wg safe.Group
+	numGo := 1024
+	for b.Loop() {
+		for i := 0; i < numGo; i++ {
+			wg.Go(func() {
+				for i := 0; i < 1024; i++ {
+					sha256.Sum256(data)
+				}
+
+			})
+		}
+		_ = wg.Wait()
+	}
+}
 
 func BenchmarkSafeGroup_NoPanic(b *testing.B) {
 	var wg safe.Group

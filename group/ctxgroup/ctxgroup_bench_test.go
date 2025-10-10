@@ -2,12 +2,48 @@ package ctxgroup_test
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"sync/atomic"
 	"testing"
 
 	"github.com/WhiCu/async/group/ctxgroup"
 )
+
+func BenchmarkCtxGroup_NoCtx(b *testing.B) {
+	data := []byte("The quick brown fox jumps over the lazy dog")
+	wg, _ := ctxgroup.WithContext(context.Background())
+	numGo := 1024
+	for b.Loop() {
+		for i := 0; i < numGo; i++ {
+			wg.CtxGo(context.Background(), func(ctx context.Context) {
+				for i := 0; i < 1024; i++ {
+					sha256.Sum256(data)
+				}
+
+			})
+		}
+		_ = wg.Wait()
+	}
+}
+func BenchmarkCtxGroup_Ctx(b *testing.B) {
+	data := []byte("The quick brown fox jumps over the lazy dog")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	wg, _ := ctxgroup.WithContext(ctx)
+	numGo := 1024
+	for b.Loop() {
+		for i := 0; i < numGo; i++ {
+			wg.CtxGo(ctx, func(ctx context.Context) {
+				for i := 0; i < 1024; i++ {
+					sha256.Sum256(data)
+				}
+
+			})
+		}
+		_ = wg.Wait()
+	}
+}
 
 func BenchmarkCtxGroup_NoPanic_NoCtx(b *testing.B) {
 
@@ -30,7 +66,8 @@ func BenchmarkCtxGroup_NoPanic_NoCtx(b *testing.B) {
 }
 
 func BenchmarkCtxGroup_NoPanic(b *testing.B) {
-	ctx, _ := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	for _, workers := range []int{1, 4, 16} {
 		wg, _ := ctxgroup.WithContext(context.Background())
 		_ = wg.SetLimit(workers)

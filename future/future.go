@@ -8,8 +8,6 @@ import "github.com/WhiCu/async/try"
 // It wraps a channel for receiving results and uses Trier for panic handling.
 type future[T any] struct {
 	value <-chan valueError[T]
-
-	t try.Trier[T]
 }
 
 // valueError wraps a value and error result from a future computation.
@@ -27,7 +25,7 @@ func Promise[T any](f func() T) *future[T] {
 	}
 	go func() {
 		defer close(c)
-		v, err := future.t.TryValue(f)
+		v, err := try.TryValue(f)
 		c <- valueError[T]{
 			value: v,
 			err:   err,
@@ -45,7 +43,7 @@ func PromiseErr[T any](f func() (T, error)) *future[T] {
 	}
 	go func() {
 		defer close(c)
-		v, err := future.t.TryValueErr(f)
+		v, err := try.TryValueErr(f)
 		c <- valueError[T]{
 			value: v,
 			err:   err,
@@ -59,10 +57,4 @@ func PromiseErr[T any](f func() (T, error)) *future[T] {
 func (f *future[T]) Value() (value T, err error) {
 	r := <-f.value
 	return r.value, r.err
-}
-
-// ValuePanic returns the original panic value that occurred during computation, if any.
-// This provides access to the raw panic value before it was converted to an error.
-func (f *future[T]) ValuePanic() any {
-	return f.t.Value()
 }

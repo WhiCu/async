@@ -16,7 +16,6 @@ func TestFuture(t *testing.T) {
 			Convey("Then it should return the correct value and no panic", func() {
 				So(val, ShouldEqual, 42)
 				So(err, ShouldBeNil)
-				So(fut.ValuePanic(), ShouldBeNil)
 			})
 		})
 
@@ -29,7 +28,7 @@ func TestFuture(t *testing.T) {
 			Convey("Then it should detect the panic and still return zero value", func() {
 				So(val, ShouldEqual, 0)
 				So(err, ShouldNotBeNil)
-				So(fut.ValuePanic(), ShouldEqual, "boom")
+				So(err.Error(), ShouldContainSubstring, "boom")
 			})
 		})
 	})
@@ -44,7 +43,6 @@ func TestFuture(t *testing.T) {
 			Convey("Then it should return the value and no error or panic", func() {
 				So(val, ShouldEqual, 7)
 				So(err, ShouldBeNil)
-				So(fut.ValuePanic(), ShouldBeNil)
 			})
 		})
 
@@ -58,7 +56,6 @@ func TestFuture(t *testing.T) {
 				So(val, ShouldEqual, 0)
 				So(err, ShouldNotBeNil)
 				So(err.Error(), ShouldEqual, "fail")
-				So(fut.ValuePanic(), ShouldBeNil)
 			})
 		})
 
@@ -72,7 +69,6 @@ func TestFuture(t *testing.T) {
 				So(val, ShouldEqual, 0)
 				So(err, ShouldNotBeNil)
 				So(err.Error(), ShouldContainSubstring, "err-panic")
-				So(fut.ValuePanic(), ShouldEqual, "err-panic")
 			})
 		})
 	})

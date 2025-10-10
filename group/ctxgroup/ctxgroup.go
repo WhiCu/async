@@ -27,14 +27,25 @@ func WithContext(ctx context.Context) (*Group, context.Context) {
 }
 
 func (g *Group) increment() {
-	if g.sem != nil {
-		g.sem <- struct{}{}
-	}
+	g.wg.Add(1)
 }
 
 func (g *Group) decrement() {
 	if g.sem != nil {
 		<-g.sem
+	}
+	g.wg.Done()
+}
+
+func (g *Group) tryAcquire() bool {
+	if g.sem == nil {
+		return true
+	}
+	select {
+	case g.sem <- struct{}{}:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -43,35 +54,34 @@ func mergeCtx(primary, secondary context.Context) context.Context {
 }
 
 func (g *Group) rawGo(f func(context.Context), ctx context.Context) {
-	g.wg.Go(
-		func() {
-			if err := try.Try(func() { f(ctx) }); err != nil {
-				g.errOnce.Do(func() {
-					g.err = err
-					g.Cancel()
-				})
-			}
-			g.decrement()
-		},
-	)
+	g.increment()
+	go func() {
+		if err := try.Try(func() { f(ctx) }); err != nil {
+			g.errOnce.Do(func() {
+				g.err = err
+				g.Cancel()
+			})
+		}
+		g.decrement()
+	}()
 }
 
 func (g *Group) rawGoErr(f func(context.Context) error, ctx context.Context) {
-	g.wg.Go(
-		func() {
-			if err := try.TryErr(func() error { return f(ctx) }); err != nil {
-				g.errOnce.Do(func() {
-					g.err = err
-					g.Cancel()
-				})
-			}
-			g.decrement()
-		},
-	)
+	g.increment()
+	go func() {
+		if err := try.TryErr(func() error { return f(ctx) }); err != nil {
+			g.errOnce.Do(func() {
+				g.err = err
+				g.Cancel()
+			})
+		}
+		g.decrement()
+	}()
+
 }
 
 func (g *Group) CtxGo(ctx context.Context, f func(context.Context)) {
-	g.increment()
+	g.tryAcquire()
 
 	switch {
 	case ctx == nil || ctx.Done() == nil:
@@ -84,7 +94,7 @@ func (g *Group) CtxGo(ctx context.Context, f func(context.Context)) {
 }
 
 func (g *Group) CtxGoErr(ctx context.Context, f func(context.Context) error) {
-	g.increment()
+	g.tryAcquire()
 
 	switch {
 	case ctx == nil || ctx.Done() == nil:
@@ -97,12 +107,8 @@ func (g *Group) CtxGoErr(ctx context.Context, f func(context.Context) error) {
 }
 
 func (g *Group) CtxTryGo(ctx context.Context, f func(context.Context)) error {
-	if g.sem != nil {
-		select {
-		case g.sem <- struct{}{}:
-		default:
-			return group.ErrLimitExceeded
-		}
+	if !g.tryAcquire() {
+		return group.ErrLimitExceeded
 	}
 
 	switch {
@@ -117,12 +123,8 @@ func (g *Group) CtxTryGo(ctx context.Context, f func(context.Context)) error {
 }
 
 func (g *Group) CtxTryGoErr(ctx context.Context, f func(context.Context) error) error {
-	if g.sem != nil {
-		select {
-		case g.sem <- struct{}{}:
-		default:
-			return group.ErrLimitExceeded
-		}
+	if !g.tryAcquire() {
+		return group.ErrLimitExceeded
 	}
 
 	switch {
